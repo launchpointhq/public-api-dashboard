@@ -679,7 +679,7 @@ function NetworkView({ resources, loadResource }: { resources: Record<ResourceKe
               {creators.map((creator: Json) => {
                 const campaigns = Array.isArray(creator.campaigns) ? creator.campaigns : [];
                 const handles = campaigns.flatMap((campaign: Json) => campaign.handles ?? []);
-                return <tr key={creator.id}><td><div className="avatar-cell"><span>{String(creator.name || "?").slice(0, 1)}</span><div><strong>{creator.name || "Unnamed creator"}</strong><small>{creator.email || "No email"}</small></div></div></td><td><Badge tone={creator.status === "active" ? "good" : "neutral"}>{creator.status || "inactive"}</Badge></td><td>{campaigns.length}</td><td>{handles.length ? handles.slice(0, 2).map((handle: Json) => `@${handle.handle}`).join(", ") : "—"}</td></tr>;
+                return <tr key={creator.id}><td><div className="avatar-cell"><span>{String(creator.name || "?").slice(0, 1)}</span><div><strong>{creator.name || "Unnamed creator"}</strong></div></div></td><td><Badge tone={creator.status === "active" ? "good" : "neutral"}>{creator.status || "inactive"}</Badge></td><td>{campaigns.length}</td><td>{handles.length ? handles.slice(0, 2).map((handle: Json) => `@${handle.handle}`).join(", ") : "—"}</td></tr>;
               })}
             </tbody></table></div>
           ) : <Empty title="No contracted creators" body="The key is connected; this test company has no creator rows yet." />}
