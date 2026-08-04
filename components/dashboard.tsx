@@ -675,11 +675,11 @@ function NetworkView({ resources, loadResource }: { resources: Record<ResourceKe
         <div className="table-panel span-two">
           <SectionTitle kicker="Creator directory" title="Campaign status at a glance" />
           {creators.length ? (
-            <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Creator</th><th>Status</th><th>Programs</th><th>Handles</th></tr></thead><tbody>
+            <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Creator</th><th>Status</th><th>Programs</th><th>Handles</th><th>Phone</th></tr></thead><tbody>
               {creators.map((creator: Json) => {
                 const campaigns = Array.isArray(creator.campaigns) ? creator.campaigns : [];
                 const handles = campaigns.flatMap((campaign: Json) => campaign.handles ?? []);
-                return <tr key={creator.id}><td><div className="avatar-cell"><span>{String(creator.name || "?").slice(0, 1)}</span><div><strong>{creator.name || "Unnamed creator"}</strong></div></div></td><td><Badge tone={creator.status === "active" ? "good" : "neutral"}>{creator.status || "inactive"}</Badge></td><td>{campaigns.length}</td><td>{handles.length ? handles.slice(0, 2).map((handle: Json) => `@${handle.handle}`).join(", ") : "—"}</td></tr>;
+                return <tr key={creator.id}><td><div className="avatar-cell"><span>{String(creator.name || "?").slice(0, 1)}</span><div><strong>{creator.name || "Unnamed creator"}</strong></div></div></td><td><Badge tone={creator.status === "active" ? "good" : "neutral"}>{creator.status || "inactive"}</Badge></td><td>{campaigns.length}</td><td>{handles.length ? handles.slice(0, 2).map((handle: Json) => `@${handle.handle}`).join(", ") : "—"}</td><td>{creator.phone ? String(creator.phone) : "—"}</td></tr>;
               })}
             </tbody></table></div>
           ) : <Empty title="No contracted creators" body="The key is connected; this test company has no creator rows yet." />}
