@@ -8,7 +8,7 @@ const allowedGetPaths = [
   /^posts$/,
   /^posts\/[^/]+$/,
   /^posts\/[^/]+\/metrics-history$/,
-  /^analytics\/(kpis|videos|accounts|overview|recruitment)$/,
+  /^analytics\/(kpis|videos|accounts|overview|leaderboard|recruitment)$/,
   /^payouts$/,
   /^payouts\/(stats|pending)$/,
   /^creators$/,
