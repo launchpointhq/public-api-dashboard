@@ -19,6 +19,7 @@ export const ENDPOINTS: Endpoint[] = [
   { method: "GET", path: "/analytics/videos", group: "Analytics", name: "Tracked videos", description: "Sortable content analytics and portfolio totals.", defaultQuery: "page=1&limit=10&sortBy=views&sortOrder=desc" },
   { method: "GET", path: "/analytics/accounts", group: "Analytics", name: "Tracked accounts", description: "Performance rolled up by creator handle.", defaultQuery: "page=1&limit=10&sortBy=totalViews&sortOrder=desc" },
   { method: "GET", path: "/analytics/overview", group: "Analytics", name: "Analytics overview", description: "Summary, top posts, top creators, and platform mix." },
+  { method: "GET", path: "/analytics/leaderboard", group: "Analytics", name: "Program leaderboard", description: "All-time program totals and creators ranked by current views.", defaultQuery: "program={id}" },
   { method: "GET", path: "/analytics/recruitment", group: "Analytics", name: "Recruitment analytics", description: "Daily invite, response, and response-rate activity." },
   { method: "POST", path: "/programs/{id}/invite", group: "Programs", name: "Create invite link", description: "Create a shareable creator invite link.", defaultBody: '{\n  "expiresInDays": 7,\n  "maxUses": 25\n}', writes: true },
   { method: "GET", path: "/payouts", group: "Payouts", name: "Wallet activity", description: "Read-only credits, debits, adjustments, and refunds.", defaultQuery: "page=1&limit=10" },

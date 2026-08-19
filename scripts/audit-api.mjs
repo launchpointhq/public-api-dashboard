@@ -107,6 +107,7 @@ const authPaths = [
   ["GET", "/analytics/videos?limit=1"],
   ["GET", "/analytics/accounts?limit=1"],
   ["GET", "/analytics/overview"],
+  ["GET", "/analytics/leaderboard?program=11111111-1111-4111-8111-111111111111"],
   ["GET", "/analytics/recruitment"],
   ["POST", "/programs/not-a-real-program/invite", { expiresInDays: 91 }],
   ["GET", "/payouts?limit=1"],
@@ -144,11 +145,41 @@ const programs = await request({
   check: listCheck,
 });
 
+const programRows = extractRows(programs.payload);
+const programId = programRows[0]?.id;
+await request({
+  name: programId ? "Get a real program leaderboard" : "Get leaderboard validation response",
+  path: `/analytics/leaderboard?program=${encodeURIComponent(programId ?? "11111111-1111-4111-8111-111111111111")}`,
+  expected: programId ? 200 : 404,
+  check: (payload) => {
+    if (!programId) {
+      return {
+        ok: Boolean(payload && typeof payload === "object" && "error" in payload),
+        detail: "unknown program is hidden behind a 404",
+      };
+    }
+    const data = payload?.data;
+    return {
+      ok: data?.programId === programId && Array.isArray(data?.topCreators) && Boolean(data?.summary),
+      detail: "program totals and ranked creators returned",
+    };
+  },
+});
+
 const posts = await request({
   name: "List posts with pagination",
   path: "/posts?page=1&limit=2",
   expected: 200,
-  check: listCheck,
+  check: (payload) => {
+    const postRows = extractRows(payload);
+    if (!postRows.length) return { ok: true, detail: "valid post page with no rows" };
+    const post = postRows[0];
+    const fields = ["creatorId", "crossPostGroupId", "url", "thumbnail", "metricsAvailable", "metricsRecordedAt", "deltaFromPrevDay"];
+    return {
+      ok: fields.every((field) => field in post) && typeof post.deltaFromPrevDay?.views === "number" && Number.isInteger(payload.totalPages),
+      detail: "post links, stable IDs, metric state, signed daily delta, and total pages returned",
+    };
+  },
 });
 
 const postRows = extractRows(posts.payload);

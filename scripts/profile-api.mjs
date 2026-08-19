@@ -18,6 +18,22 @@ const key = process.env.LAUNCHPOINT_API_KEY;
 const base = process.env.LAUNCHPOINT_API_BASE_URL ?? "https://dashboard.launchpointhq.com/api/v1";
 if (!key) throw new Error("Missing LAUNCHPOINT_API_KEY");
 
+function extractRows(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (!payload || typeof payload !== "object") return [];
+  for (const name of ["data", "programs", "items"]) {
+    if (Array.isArray(payload[name])) return payload[name];
+  }
+  return [];
+}
+
+const programResponse = await fetch(`${base}/programs?page=1&limit=1`, {
+  headers: { "x-api-key": key },
+  signal: AbortSignal.timeout(45_000),
+});
+const programPayload = programResponse.ok ? await programResponse.json() : null;
+const programId = extractRows(programPayload)[0]?.id;
+
 const checks = [
   "/programs?page=1&limit=2",
   "/posts?page=1&limit=2",
@@ -25,6 +41,7 @@ const checks = [
   "/analytics/videos?page=1&limit=2&sortBy=views&sortOrder=desc",
   "/analytics/accounts?page=1&limit=2&sortBy=totalViews&sortOrder=desc",
   "/analytics/overview",
+  ...(programId ? [`/analytics/leaderboard?program=${encodeURIComponent(programId)}`] : []),
   "/analytics/recruitment",
   "/payouts?page=1&limit=2",
   "/payouts/stats",

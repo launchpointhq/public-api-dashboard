@@ -23,7 +23,7 @@ pnpm audit:api
 pnpm profile:api
 ```
 
-The audit covers all 17 current OpenAPI operations plus a missing-key check for every route. Its invite check is validation-only and does not create anything.
+The audit covers all 18 current OpenAPI operations plus a missing-key check for every route. It uses the first visible program for the leaderboard check. Its invite check is validation-only and does not create anything.
 
 The latest timings are documented in [docs/upstream-api-findings.md](docs/upstream-api-findings.md). `profile:api` provides a safe, read-only latency pass.
 

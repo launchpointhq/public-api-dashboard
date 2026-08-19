@@ -75,7 +75,7 @@ const EMPTY_RESOURCE: Resource = { status: "idle" };
 
 const RESOURCE_PATHS: Record<ResourceKey, string> = {
   programs: "/programs?page=1&limit=50",
-  posts: "/posts?page=1&limit=50",
+  posts: "/posts?page=1&limit=500",
   kpis: "/analytics/kpis",
   videos: "/analytics/videos?page=1&limit=50&sortBy=views&sortOrder=desc",
   accounts: "/analytics/accounts?page=1&limit=50&sortBy=totalViews&sortOrder=desc",
@@ -104,7 +104,7 @@ const NAV: Array<{ id: View; label: string; eyebrow: string; icon: typeof Gauge 
   { id: "network", label: "Network", eyebrow: "Creators & accounts", icon: Network },
   { id: "money", label: "Money", eyebrow: "Wallet & payouts", icon: WalletCards },
   { id: "programs", label: "Programs", eyebrow: "Campaign operations", icon: Layers3 },
-  { id: "lab", label: "API lab", eyebrow: "17 live endpoints", icon: Code2 },
+  { id: "lab", label: "API lab", eyebrow: `${ENDPOINTS.length} live endpoints`, icon: Code2 },
 ];
 
 const compact = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
@@ -114,6 +114,18 @@ const usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD",
 function number(value: unknown) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function viewTrend(post: Json) {
+  const delta = number(post.deltaFromPrevDay?.views);
+  const previousViews = number(post.views) - delta;
+  const percent = previousViews > 0 ? (delta / previousViews) * 100 : null;
+  const sign = delta > 0 ? "+" : "";
+  return {
+    delta,
+    deltaLabel: `${sign}${compact.format(delta)}`,
+    percentLabel: percent === null ? "new" : `${percent > 0 ? "+" : ""}${percent.toFixed(1)}%`,
+  };
 }
 
 function rows(resource: Resource | undefined) {
@@ -141,6 +153,11 @@ function formatDate(value: unknown, withTime = false) {
     year: date.getFullYear() === new Date().getFullYear() ? undefined : "numeric",
     ...(withTime ? { hour: "numeric", minute: "2-digit" } : {}),
   }).format(date);
+}
+
+function shortId(value: unknown) {
+  const text = String(value ?? "");
+  return text.length > 18 ? `${text.slice(0, 9)}…${text.slice(-6)}` : text || "—";
 }
 
 async function callApi(path: string, init?: RequestInit) {
@@ -223,7 +240,14 @@ function Metric({ label, value, note, tone }: { label: string; value: string; no
 
 function PlatformMark({ platform }: { platform: string }) {
   const normalized = platform?.toLowerCase() || "other";
-  const label = normalized === "instagram" ? "IG" : normalized === "tiktok" ? "TT" : normalized === "youtube" ? "YT" : normalized.slice(0, 2).toUpperCase();
+  const labels: Record<string, string> = {
+    facebook: "FB",
+    instagram: "IG",
+    snapchat: "SC",
+    tiktok: "TT",
+    youtube: "YT",
+  };
+  const label = labels[normalized] ?? normalized.slice(0, 2).toUpperCase();
   return <span className={`platform-mark platform-${normalized}`}>{label}</span>;
 }
 
@@ -486,7 +510,7 @@ function Overview({ resources, loadResource }: { resources: Record<ResourceKey, 
           </div>
           <div className="health-line"><span style={{ width: `${(LATEST_AUDIT.passed / LATEST_AUDIT.total) * 100}%` }} /></div>
           <div className="health-facts">
-            <span><CircleCheck size={15} /> {LATEST_AUDIT.authGuardsPassed}/17 auth guards</span>
+            <span><CircleCheck size={15} /> {LATEST_AUDIT.authGuardsPassed}/{LATEST_AUDIT.authGuardsTotal} auth guards</span>
             {LATEST_AUDIT.failed ? <span><CircleAlert size={15} /> {LATEST_AUDIT.failed} failing routes</span> : <span className="health-clear"><CircleCheck size={15} /> No failing routes</span>}
           </div>
         </div>
@@ -550,6 +574,7 @@ function Content({ resources, loadResource }: { resources: Record<ResourceKey, R
 
   const postDetail = payload(detail);
   const metricHistory = payload(history);
+  const selectedPost = catalog.find((post: Json) => post.id === selectedId);
 
   return (
     <div className="view-stack enter">
@@ -570,7 +595,7 @@ function Content({ resources, loadResource }: { resources: Record<ResourceKey, R
         <div className="table-toolbar">
           <div className="search-field"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search title or creator" aria-label="Search content" /></div>
           <div className="filter-pills" aria-label="Filter by platform">
-            {["all", "instagram", "tiktok", "youtube"].map((item) => <button key={item} className={platform === item ? "active" : ""} onClick={() => setPlatform(item)}>{item}</button>)}
+            {["all", "instagram", "tiktok", "youtube", "facebook", "snapchat"].map((item) => <button key={item} className={platform === item ? "active" : ""} onClick={() => setPlatform(item)}>{item}</button>)}
           </div>
           <button className="secondary-button" onClick={() => void exportPosts()} disabled={exporting}>
             {exporting ? <LoaderCircle size={15} className="spin" /> : <ArrowDownToLine size={15} />} Export CSV
@@ -582,18 +607,22 @@ function Content({ resources, loadResource }: { resources: Record<ResourceKey, R
         ) : filtered.length ? (
           <div className="data-table-wrap">
             <table className="data-table content-table">
-              <thead><tr><th>Post</th><th>Views</th><th>Engagement</th><th>Earnings</th><th>Paid</th><th /></tr></thead>
+              <thead><tr><th>Post</th><th>Views</th><th>Today</th><th>Engagement</th><th>Earnings</th><th>Paid</th><th /></tr></thead>
               <tbody>
-                {filtered.map((video: Json) => (
-                  <tr key={video.id} className={selectedId === video.id ? "selected" : ""}>
-                    <td><div className="post-cell"><PlatformMark platform={video.platform} /><div><strong>{video.title || "Untitled post"}</strong><span>{video.contractorName || "Unknown creator"} · {formatDate(video.uploadedAt)}</span></div></div></td>
-                    <td className="numeric"><strong>{compact.format(number(video.views))}</strong></td>
-                    <td className="numeric">{number(video.engagementRate || (number(video.likes) + number(video.comments) + number(video.shares)) / Math.max(1, number(video.views)) * 100).toFixed(1)}%</td>
-                    <td className="numeric">{usd.format(number(video.earnings))}</td>
-                    <td>{video.paid ? <Badge tone="good">Paid</Badge> : <Badge tone="warm">Open</Badge>}</td>
-                    <td><button className="row-button" onClick={() => void selectPost(video.id)} aria-label={`Open ${video.title || "post"}`}><ArrowRight size={16} /></button></td>
-                  </tr>
-                ))}
+                {filtered.map((video: Json) => {
+                  const trend = viewTrend(video);
+                  return (
+                    <tr key={video.id} className={selectedId === video.id ? "selected" : ""}>
+                      <td><div className="post-cell"><PlatformMark platform={video.platform} /><div>{video.url ? <a className="post-link" href={video.url} target="_blank" rel="noreferrer"><strong>{video.title || "Untitled post"}</strong><ExternalLink size={11} /></a> : <strong>{video.title || "Untitled post"}</strong>}<span>{video.contractorName || "Unknown creator"} · {formatDate(video.uploadedAt)}</span></div></div></td>
+                      <td className="numeric"><strong>{compact.format(number(video.views))}</strong></td>
+                      <td>{video.metricsAvailable === false ? <Badge tone="neutral">No metrics</Badge> : <div className="trend-cell"><Badge tone={trend.delta > 0 ? "good" : trend.delta < 0 ? "bad" : "neutral"}>{trend.deltaLabel}</Badge><small>{trend.percentLabel}</small></div>}</td>
+                      <td className="numeric">{number(video.engagementRate || (number(video.likes) + number(video.comments) + number(video.shares)) / Math.max(1, number(video.views)) * 100).toFixed(1)}%</td>
+                      <td className="numeric">{usd.format(number(video.earnings))}</td>
+                      <td>{video.paid ? <Badge tone="good">Paid</Badge> : <Badge tone="warm">Open</Badge>}</td>
+                      <td><button className="row-button" onClick={() => void selectPost(video.id)} aria-label={`Open ${video.title || "post"}`}><ArrowRight size={16} /></button></td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -609,13 +638,16 @@ function Content({ resources, loadResource }: { resources: Record<ResourceKey, R
             <>
               <div className="detail-copy">
                 <div className="detail-label"><PlatformMark platform={postDetail.platform} /> Post intelligence</div>
+                {selectedPost?.thumbnail ? <img className="detail-thumbnail" src={selectedPost.thumbnail} alt="" /> : null}
                 <h3>{postDetail.title || "Untitled post"}</h3>
                 <p>{postDetail.description || `${postDetail.creator || postDetail.creatorInfo?.name || "Creator"} posted this on ${formatDate(postDetail.uploadedAt)}.`}</p>
                 <a href={postDetail.url} target="_blank" rel="noreferrer">Open original <ExternalLink size={14} /></a>
                 <div className="detail-facts">
                   <div><span>Program</span><strong>{postDetail.program?.name || "—"}</strong></div>
                   <div><span>Contract</span><strong>{postDetail.contract?.name || "—"}</strong></div>
-                  <div><span>Last synced</span><strong>{formatDate(postDetail.lastSyncedAt, true)}</strong></div>
+                  <div><span>Metrics snapshot</span><strong>{selectedPost?.metricsAvailable === false ? "Not available" : formatDate(selectedPost?.metricsRecordedAt, true)}</strong></div>
+                  <div><span>Creator ID</span><strong title={selectedPost?.creatorId}>{shortId(selectedPost?.creatorId)}</strong></div>
+                  <div><span>Cross-post group</span><strong title={selectedPost?.crossPostGroupId}>{shortId(selectedPost?.crossPostGroupId)}</strong></div>
                 </div>
               </div>
               <div className="detail-chart">
@@ -642,7 +674,7 @@ function Content({ resources, loadResource }: { resources: Record<ResourceKey, R
           )}
         </section>
       ) : (
-        <div className="catalog-note"><FileText size={16} /> The plain post catalog endpoint returned {posts.length} records in its first page. Open a row above to use both post detail endpoints.</div>
+        <div className="catalog-note"><FileText size={16} /> The post catalog returned {posts.length} records across {number(resources.posts.data?.totalPages)} page(s). Open a row above to inspect its stable IDs, metric snapshot, and detail history.</div>
       )}
     </div>
   );
@@ -756,10 +788,33 @@ function Programs({ resources, loadResource }: { resources: Record<ResourceKey, 
   const [maxUses, setMaxUses] = useState(25);
   const [inviteState, setInviteState] = useState<Resource>({ status: "idle" });
   const [copied, setCopied] = useState(false);
+  const [leaderboardState, setLeaderboardState] = useState<Resource>({ status: "idle" });
+  const [leaderboardRefresh, setLeaderboardRefresh] = useState(0);
 
   useEffect(() => {
     if (!selectedProgram && programs[0]?.id) setSelectedProgram(programs[0].id);
   }, [programs, selectedProgram]);
+
+  useEffect(() => {
+    let active = true;
+    if (!selectedProgram) {
+      setLeaderboardState({ status: "idle" });
+      return () => {
+        active = false;
+      };
+    }
+    setLeaderboardState({ status: "loading" });
+    void callApi(`/analytics/leaderboard?program=${encodeURIComponent(selectedProgram)}`)
+      .then((result) => {
+        if (active) setLeaderboardState({ status: "ready", data: result.data, latencyMs: result.latencyMs, rateRemaining: result.rateRemaining });
+      })
+      .catch((caught: Error) => {
+        if (active) setLeaderboardState({ status: "error", error: caught.message });
+      });
+    return () => {
+      active = false;
+    };
+  }, [leaderboardRefresh, selectedProgram]);
 
   const createInvite = async () => {
     if (!selectedProgram) return;
@@ -783,6 +838,10 @@ function Programs({ resources, loadResource }: { resources: Record<ResourceKey, 
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1500);
   };
+  const leaderboard = payload(leaderboardState);
+  const leaders = Array.isArray(leaderboard.topCreators) ? leaderboard.topCreators : [];
+  const leaderboardSummary = leaderboard.summary ?? {};
+  const selectedProgramName = programs.find((program: Json) => program.id === selectedProgram)?.name ?? "Selected program";
 
   return (
     <div className="view-stack enter">
@@ -805,6 +864,21 @@ function Programs({ resources, loadResource }: { resources: Record<ResourceKey, 
           {inviteState.status === "error" ? <ErrorState title="Invite failed" body={inviteState.error ?? "Unknown error"} /> : null}
           {invite.link ? <div className="invite-result"><CircleCheck size={17} /><div><strong>Invite ready</strong><span>{formatDate(invite.expiresAt, true)} · {invite.maxUses} uses</span></div><button onClick={() => void copyInvite()} aria-label="Copy invite link">{copied ? <Check size={16} /> : <Copy size={16} />}</button></div> : null}
         </div>
+      </section>
+
+      <section className="table-panel leaderboard-panel">
+        <SectionTitle kicker="Program leaderboard" title={`${selectedProgramName} rankings`} action={<button className="text-button" onClick={() => setLeaderboardRefresh((value) => value + 1)} disabled={!selectedProgram || leaderboardState.status === "loading"}><RefreshCw size={14} /> Refresh</button>} />
+        {selectedProgram ? (
+          <div className="leaderboard-summary">
+            <div><span>Creators</span><strong>{whole.format(number(leaderboardSummary.uniqueCreators))}</strong></div>
+            <div><span>Total views</span><strong>{compact.format(number(leaderboardSummary.totalViews))}</strong></div>
+            <div><span>Platform posts</span><strong>{whole.format(number(leaderboardSummary.totalPosts))}</strong></div>
+            <div><span>Source videos</span><strong>{whole.format(number(leaderboardSummary.totalSourceVideos))}</strong></div>
+          </div>
+        ) : null}
+        {leaderboardState.status === "loading" ? <div className="loading-block"><LoaderCircle className="spin" /> Reading program rankings…</div> : leaderboardState.status === "error" ? <ErrorState title="Leaderboard failed" body={leaderboardState.error ?? "Unknown error"} onRetry={() => setLeaderboardRefresh((value) => value + 1)} /> : leaders.length ? (
+          <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Rank</th><th>Creator</th><th>Views</th><th>Platform posts</th><th>Source videos</th></tr></thead><tbody>{leaders.map((creator: Json, index: number) => <tr key={creator.id}><td><span className="leaderboard-rank">{String(index + 1).padStart(2, "0")}</span></td><td><strong>{creator.name}</strong></td><td className="numeric"><strong>{compact.format(number(creator.totalViews))}</strong></td><td className="numeric">{whole.format(number(creator.totalPosts))}</td><td className="numeric">{whole.format(number(creator.totalSourceVideos))}</td></tr>)}</tbody></table></div>
+        ) : <Empty title={selectedProgram ? "No ranked creators yet" : "Choose a program"} body={selectedProgram ? "Creators appear after the program has tracked posts." : "Select a visible program to load its leaderboard."} />}
       </section>
 
       <section className="table-panel">
@@ -834,7 +908,7 @@ function ApiLab({ resources }: { resources: Record<ResourceKey, Resource> }) {
   };
 
   const runEndpoint = async () => {
-    if (path.includes("{")) {
+    if (`${path}?${query}`.includes("{")) {
       setRun({ status: "error", error: "Replace the {id} part with a real ID first." });
       return;
     }
@@ -860,7 +934,7 @@ function ApiLab({ resources }: { resources: Record<ResourceKey, Resource> }) {
   return (
     <div className="view-stack enter">
       <section className="lab-hero">
-        <div><span className="eyebrow">OpenAPI, made tangible</span><h2>Seventeen doors.<br />One honest test bench.</h2><p>The key stays server-side. Pick a route, shape the request, and see the real response.</p></div>
+        <div><span className="eyebrow">OpenAPI, made tangible</span><h2>{ENDPOINTS.length} doors.<br />One honest test bench.</h2><p>The key stays server-side. Pick a route, shape the request, and see the real response.</p></div>
         <div className="lab-stamp"><Code2 size={24} /><strong>v1</strong><span>100 req/min</span><small>{rateRemaining ?? "—"} last seen remaining</small></div>
       </section>
 
@@ -886,8 +960,8 @@ function ApiLab({ resources }: { resources: Record<ResourceKey, Resource> }) {
       </section>
 
       <section className="audit-panel">
-        <SectionTitle kicker="Full contract audit" title={LATEST_AUDIT.failed ? `${LATEST_AUDIT.passed} passed. ${LATEST_AUDIT.failed} need work.` : `${LATEST_AUDIT.passed} passed. Every route is healthy.`} action={<span className="audit-date">Tested {formatDate(LATEST_AUDIT.ranAt, true)}</span>} />
-        <div className="audit-summary"><div className="audit-ring" style={{ "--audit-progress": `${(LATEST_AUDIT.passed / LATEST_AUDIT.total) * 360}deg` } as React.CSSProperties}><strong>{Math.round((LATEST_AUDIT.passed / LATEST_AUDIT.total) * 100)}%</strong></div><div><strong>Every route was called with the test key.</strong><p>All 17 feature checks passed. All 17 missing-key checks also returned the expected 401 error shape.</p></div></div>
+        <SectionTitle kicker="Latest recorded audit" title={LATEST_AUDIT.failed ? `${LATEST_AUDIT.passed} passed. ${LATEST_AUDIT.failed} need work.` : `${LATEST_AUDIT.passed} passed. Every tested route was healthy.`} action={<span className="audit-date">Tested {formatDate(LATEST_AUDIT.ranAt, true)}</span>} />
+        <div className="audit-summary"><div className="audit-ring" style={{ "--audit-progress": `${(LATEST_AUDIT.passed / LATEST_AUDIT.total) * 360}deg` } as React.CSSProperties}><strong>{Math.round((LATEST_AUDIT.passed / LATEST_AUDIT.total) * 100)}%</strong></div><div><strong>Recorded against the live API with the test key.</strong><p>All {LATEST_AUDIT.total} feature checks passed. All {LATEST_AUDIT.authGuardsTotal} missing-key checks also returned the expected error shape. Run <code>pnpm audit:api</code> to include newly configured routes.</p></div></div>
         <div className="audit-table-wrap"><table className="audit-table"><thead><tr><th>Result</th><th>Route</th><th>Status</th><th>Time</th><th>What was checked</th></tr></thead><tbody>{LATEST_AUDIT.results.map((item) => <tr key={`${item.method}-${item.path}`} className={item.ok ? "" : "failed"}><td>{item.ok ? <CircleCheck size={17} /> : <CircleAlert size={17} />}</td><td><Badge tone={item.method === "GET" ? "good" : "violet"}>{item.method}</Badge><code>{item.path}</code></td><td><Badge tone={item.ok ? "good" : "bad"}>{item.status}</Badge></td><td>{item.latencyMs} ms</td><td>{item.note}</td></tr>)}</tbody></table></div>
       </section>
     </div>
