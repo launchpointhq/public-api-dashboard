@@ -116,6 +116,12 @@ function number(value: unknown) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+/** CPM is dollars paid per 1,000 views. The API sends null when it has no views or no money yet. */
+function cpmLabel(value: unknown) {
+  const parsed = Number(value);
+  return value === null || value === undefined || !Number.isFinite(parsed) ? "—" : `${usd.format(parsed)} CPM`;
+}
+
 function viewTrend(post: Json) {
   const delta = number(post.deltaFromPrevDay?.views);
   const previousViews = number(post.views) - delta;
@@ -423,6 +429,7 @@ function Overview({ resources, loadResource }: { resources: Record<ResourceKey, 
             <span>Total measured reach</span>
             <strong>{compact.format(number(posts.totalViews || summary.totalViews))}</strong>
             <small>across {whole.format(number(posts.total || summary.totalPosts))} tracked posts</small>
+            <small>{cpmLabel(summary.cpm)} · paid per 1,000 views</small>
           </div>
         </div>
         <div className="metric-stack">
@@ -587,7 +594,7 @@ function Content({ resources, loadResource }: { resources: Record<ResourceKey, R
         <div className="content-totals">
           <strong>{whole.format(number(resources.videos.data?.summary?.totalVideos ?? resources.posts.data?.total))}</strong>
           <span>tracked posts</span>
-          <small>{compact.format(number(resources.videos.data?.summary?.totalViews))} combined views</small>
+          <small>{compact.format(number(resources.videos.data?.summary?.totalViews))} combined views · {cpmLabel(resources.videos.data?.summary?.cpm)}</small>
         </div>
       </section>
 
@@ -607,7 +614,7 @@ function Content({ resources, loadResource }: { resources: Record<ResourceKey, R
         ) : filtered.length ? (
           <div className="data-table-wrap">
             <table className="data-table content-table">
-              <thead><tr><th>Post</th><th>Views</th><th>Today</th><th>Engagement</th><th>Earnings</th><th>Paid</th><th /></tr></thead>
+              <thead><tr><th>Post</th><th>Views</th><th>Today</th><th>Engagement</th><th>Earnings</th><th>CPM</th><th>Paid</th><th /></tr></thead>
               <tbody>
                 {filtered.map((video: Json) => {
                   const trend = viewTrend(video);
@@ -618,6 +625,7 @@ function Content({ resources, loadResource }: { resources: Record<ResourceKey, R
                       <td>{video.metricsAvailable === false ? <Badge tone="neutral">No metrics</Badge> : <div className="trend-cell"><Badge tone={trend.delta > 0 ? "good" : trend.delta < 0 ? "bad" : "neutral"}>{trend.deltaLabel}</Badge><small>{trend.percentLabel}</small></div>}</td>
                       <td className="numeric">{number(video.engagementRate || (number(video.likes) + number(video.comments) + number(video.shares)) / Math.max(1, number(video.views)) * 100).toFixed(1)}%</td>
                       <td className="numeric">{usd.format(number(video.earnings))}</td>
+                      <td className="numeric">{cpmLabel(video.cpm)}</td>
                       <td>{video.paid ? <Badge tone="good">Paid</Badge> : <Badge tone="warm">Open</Badge>}</td>
                       <td><button className="row-button" onClick={() => void selectPost(video.id)} aria-label={`Open ${video.title || "post"}`}><ArrowRight size={16} /></button></td>
                     </tr>
@@ -722,7 +730,7 @@ function NetworkView({ resources, loadResource }: { resources: Record<ResourceKe
           {resources.accounts.status === "error" ? (
             <ErrorState title="This endpoint is broken upstream" body="The API returns 500 with its documented defaults and totalViews sort." onRetry={() => void loadResource("accounts")} />
           ) : accounts.length ? accounts.slice(0, 8).map((account: Json) => (
-            <div className="account-row" key={`${account.platform}-${account.handle}`}><PlatformMark platform={account.platform} /><div><strong>@{account.handle}</strong><span>{compact.format(number(account.totalViews))} views · {account.totalPosts} posts</span></div><b>{number(account.engagementRate).toFixed(1)}%</b></div>
+            <div className="account-row" key={`${account.platform}-${account.handle}`}><PlatformMark platform={account.platform} /><div><strong>@{account.handle}</strong><span>{compact.format(number(account.totalViews))} views · {account.totalPosts} posts · {cpmLabel(account.cpm)}</span></div><b>{number(account.engagementRate).toFixed(1)}%</b></div>
           )) : <Empty title="No tracked accounts" body="Accounts will roll up here after posts arrive." />}
         </div>
       </section>
