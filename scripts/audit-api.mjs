@@ -102,6 +102,7 @@ const authPaths = [
   ["GET", "/posts?limit=1"],
   ["GET", "/posts/not-a-real-post"],
   ["GET", "/posts/not-a-real-post/metrics-history"],
+  ["GET", "/posts/not-a-real-post/analysis"],
   ["POST", "/posts/export", { selectedIds: [] }],
   ["GET", "/analytics/kpis"],
   ["GET", "/analytics/videos?limit=1"],
@@ -197,6 +198,26 @@ await request({
   path: `/posts/${encodeURIComponent(postId ?? "not-a-real-post")}/metrics-history?days=30&limit=30`,
   expected: postId ? 200 : [400, 404],
   check: (payload) => ({ ok: Boolean(payload), detail: postId ? "real history returned" : "missing post rejected safely" }),
+});
+
+await request({
+  name: postId ? "Get real post analysis" : "Get analysis validation response",
+  path: `/posts/${encodeURIComponent(postId ?? "not-a-real-post")}/analysis`,
+  expected: postId ? 200 : [400, 404],
+  check: (payload) => {
+    const data = payload && typeof payload === "object" ? payload.data : null;
+    const ok = Boolean(
+      data &&
+        typeof data === "object" &&
+        "analysisStatus" in data &&
+        "storyboard" in data &&
+        data.retention &&
+        typeof data.retention === "object" &&
+        "organic" in data.retention &&
+        "paid" in data.retention
+    );
+    return { ok, detail: postId && ok ? "real analysis returned" : "missing post rejected safely" };
+  },
 });
 
 await request({
