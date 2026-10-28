@@ -526,6 +526,30 @@ function Overview({ resources, loadResource }: { resources: Record<ResourceKey, 
   );
 }
 
+function PostAdCode({ code }: { code?: string | null }) {
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
+
+  const copyCode = async () => {
+    if (!code) return;
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopyState("copied");
+    } catch {
+      setCopyState("failed");
+    }
+  };
+
+  if (!code) return <span className="ad-code-empty">Not available</span>;
+
+  return (
+    <div className="ad-code-control">
+      <code>{code}</code>
+      <button className="row-button" onClick={() => void copyCode()} aria-label="Copy ad code" title="Copy ad code">{copyState === "copied" ? <Check size={14} /> : <Copy size={14} />}</button>
+      <span className="ad-code-feedback" role="status">{copyState === "copied" ? "Copied" : copyState === "failed" ? "Could not copy. Select the code to copy it manually." : ""}</span>
+    </div>
+  );
+}
+
 function Content({ resources, loadResource }: { resources: Record<ResourceKey, Resource>; loadResource: (key: ResourceKey) => Promise<void> }) {
   const videos = rows(resources.videos);
   const posts = rows(resources.posts);
@@ -589,7 +613,7 @@ function Content({ resources, loadResource }: { resources: Record<ResourceKey, R
         <div>
           <span className="eyebrow">The content ledger</span>
           <h2>Every post has a pulse.</h2>
-          <p>Filter the portfolio, export the raw ledger, or open any post to see its daily growth.</p>
+          <p>Filter the portfolio, copy saved ad codes, export the raw ledger, or open any post to see its daily growth.</p>
         </div>
         <div className="content-totals">
           <strong>{whole.format(number(resources.videos.data?.summary?.totalVideos ?? resources.posts.data?.total))}</strong>
@@ -614,13 +638,14 @@ function Content({ resources, loadResource }: { resources: Record<ResourceKey, R
         ) : filtered.length ? (
           <div className="data-table-wrap">
             <table className="data-table content-table">
-              <thead><tr><th>Post</th><th>Views</th><th>Today</th><th>Engagement</th><th>Earnings</th><th>CPM</th><th>Paid</th><th /></tr></thead>
+              <thead><tr><th>Post</th><th>Ad code</th><th>Views</th><th>Today</th><th>Engagement</th><th>Earnings</th><th>CPM</th><th>Paid</th><th /></tr></thead>
               <tbody>
                 {filtered.map((video: Json) => {
                   const trend = viewTrend(video);
                   return (
                     <tr key={video.id} className={selectedId === video.id ? "selected" : ""}>
                       <td><div className="post-cell"><PlatformMark platform={video.platform} /><div>{video.url ? <a className="post-link" href={video.url} target="_blank" rel="noreferrer"><strong>{video.title || "Untitled post"}</strong><ExternalLink size={11} /></a> : <strong>{video.title || "Untitled post"}</strong>}<span>{video.contractorName || "Unknown creator"} · {formatDate(video.uploadedAt)}</span></div></div></td>
+                      <td><PostAdCode key={video.adCode} code={video.adCode} /></td>
                       <td className="numeric"><strong>{compact.format(number(video.views))}</strong></td>
                       <td>{video.metricsAvailable === false ? <Badge tone="neutral">No metrics</Badge> : <div className="trend-cell"><Badge tone={trend.delta > 0 ? "good" : trend.delta < 0 ? "bad" : "neutral"}>{trend.deltaLabel}</Badge><small>{trend.percentLabel}</small></div>}</td>
                       <td className="numeric">{number(video.engagementRate || (number(video.likes) + number(video.comments) + number(video.shares)) / Math.max(1, number(video.views)) * 100).toFixed(1)}%</td>
@@ -650,6 +675,7 @@ function Content({ resources, loadResource }: { resources: Record<ResourceKey, R
                 <h3>{postDetail.title || "Untitled post"}</h3>
                 <p>{postDetail.description || `${postDetail.creator || postDetail.creatorInfo?.name || "Creator"} posted this on ${formatDate(postDetail.uploadedAt)}.`}</p>
                 <a href={postDetail.url} target="_blank" rel="noreferrer">Open original <ExternalLink size={14} /></a>
+                <div className="post-ad-code"><span>Ad code</span><PostAdCode key={postDetail.adCode} code={postDetail.adCode} /></div>
                 <div className="detail-facts">
                   <div><span>Program</span><strong>{postDetail.program?.name || "—"}</strong></div>
                   <div><span>Contract</span><strong>{postDetail.contract?.name || "—"}</strong></div>

@@ -240,6 +240,14 @@ main { min-height: 100vh; margin-left: 252px; }
 .platform-youtube { background: #d94d43; }
 .row-button { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: transparent; cursor: pointer; }
 .row-button:hover { color: white; background: var(--violet); border-color: var(--violet); }
+.ad-code-control { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 4px 8px; min-width: 150px; max-width: 260px; }
+.ad-code-control code { align-self: center; overflow-wrap: anywhere; font-size: 11px; line-height: 1.5; user-select: all; }
+.ad-code-control .row-button:focus-visible { outline: 2px solid var(--violet); outline-offset: 3px; }
+.ad-code-feedback { grid-column: 1 / -1; color: var(--ink-soft); font-size: 10px; }
+.ad-code-feedback:empty { display: none; }
+.ad-code-empty { color: var(--ink-faint); font-size: 10px; }
+.post-ad-code { display: grid; gap: 8px; margin-top: 20px; }
+.post-ad-code > span { color: var(--ink-faint); font-size: 8px; text-transform: uppercase; letter-spacing: .1em; }
 
 .detail-panel { position: relative; display: grid; grid-template-columns: .8fr 1.2fr; gap: clamp(24px, 4vw, 54px); min-height: 390px; padding: clamp(28px, 4vw, 48px); border-radius: 22px; background: #eee7de; }
 .detail-close { position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid #d5ccc2; border-radius: 50%; background: transparent; cursor: pointer; }

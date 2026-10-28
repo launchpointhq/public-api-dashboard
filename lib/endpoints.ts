@@ -11,8 +11,8 @@ export type Endpoint = {
 
 export const ENDPOINTS: Endpoint[] = [
   { method: "GET", path: "/programs", group: "Programs", name: "List programs", description: "Campaigns with status, search, and pagination.", defaultQuery: "page=1&limit=10" },
-  { method: "GET", path: "/posts", group: "Posts", name: "List posts", description: "Tracked content with program, creator, platform, and date filters.", defaultQuery: "page=1&limit=10" },
-  { method: "GET", path: "/posts/{id}", group: "Posts", name: "Get post", description: "A post, its creator, program, contract, payment, and current metrics." },
+  { method: "GET", path: "/posts", group: "Posts", name: "List posts", description: "Tracked content with program, creator, platform, and date filters. Includes adCode, the saved verified, unexpired code or null.", defaultQuery: "page=1&limit=10" },
+  { method: "GET", path: "/posts/{id}", group: "Posts", name: "Get post", description: "A post, its creator, program, contract, payment, and current metrics. Includes adCode, the saved verified, unexpired code or null." },
   { method: "GET", path: "/posts/{id}/metrics-history", group: "Posts", name: "Post metrics history", description: "Daily metric snapshots, deltas, and growth.", defaultQuery: "days=30&limit=30" },
   { method: "GET", path: "/posts/{id}/analysis", group: "Posts", name: "Post analysis", description: "Storyboard scenes plus organic and paid retention." },
   { method: "POST", path: "/posts/export", group: "Posts", name: "Export posts", description: "Download matching post data as CSV.", defaultBody: '{\n  "selectedIds": []\n}' },
