@@ -115,8 +115,8 @@ const authPaths = [
   ["GET", "/payouts/stats"],
   ["GET", "/payouts/pending?limit=1"],
   ["GET", "/creators?limit=1"],
-  ["GET", "/applications?folder=recommended&limit=1"],
-  ["GET", "/applications?folder=all&limit=1"],
+  ["GET", "/applications?pool=recommended&limit=1"],
+  ["GET", "/applications?pool=all&limit=1"],
   ["GET", "/creators/collections"],
   ["GET", "/contracts?limit=1"],
 ];
@@ -281,11 +281,11 @@ await request({
   check: listCheck,
 });
 await request({ name: "List creators with campaign status", path: "/creators?page=1&limit=2", expected: 200, check: listCheck });
-for (const folder of ["recommended", "all"]) {
+for (const pool of ["recommended", "all"]) {
   await request({
-    name: `${folder} pending applications`,
-    path: `/applications?page=1&limit=2&status=pending&folder=${folder}`,
-    expected: folder === "all" ? [200, 403] : 200,
+    name: `${pool} pending applications`,
+    path: `/applications?page=1&limit=2&status=pending&pool=${pool}`,
+    expected: pool === "all" ? [200, 403] : 200,
     check: (payload, response) => {
       if (response.status === 403) {
         return {
@@ -305,10 +305,10 @@ for (const folder of ["recommended", "all"]) {
   });
 }
 await request({
-  name: "Reject an unknown application folder",
-  path: "/applications?folder=invalid&limit=1",
+  name: "Reject an unknown application pool",
+  path: "/applications?pool=invalid&limit=1",
   expected: 400,
-  check: (payload) => ({ ok: typeof payload?.error === "string", detail: "invalid folder is rejected instead of silently changing population" }),
+  check: (payload) => ({ ok: typeof payload?.error === "string", detail: "invalid pool is rejected instead of silently changing population" }),
 });
 await request({ name: "List creator collections", path: "/creators/collections", expected: 200, check: listCheck });
 await request({ name: "List contracts with pagination", path: "/contracts?page=1&limit=2", expected: 200, check: listCheck });

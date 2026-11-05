@@ -25,9 +25,9 @@ pnpm profile:api
 
 The audit covers the endpoint lab's operations plus missing-key checks. It uses the first visible program for the leaderboard check. Its invite check is validation-only and does not create anything.
 
-The endpoint lab's **Browse applications** request defaults to pending Recommended applicants. Change the query to `folder=all` to request Recommended plus additional eligible applicants. This is a combined population, not an additional-only folder. The proxy still keeps the key server-side and only permits the exact read route. There is no separate applications table in this demo; the existing endpoint lab renders the description, editable query and API response.
+The endpoint lab's **Browse applications** request defaults to pending Recommended applicants. Change the query to `pool=all` to request Recommended plus additional eligible applicants. This is a combined population, not an additional-only pool. The proxy still keeps the key server-side and only permits the exact read route. There is no separate applications table in this demo; the existing endpoint lab renders the description, editable query and API response.
 
-Run the application-folder audit after the matching backend change is deployed. It accepts a documented `403` for an unavailable All applicants folder, verifies bounded pending-application pages without requiring any applicants, and rejects unknown folder values. It also checks that both folders reject a missing key. The recorded audit snapshot is historical and does not claim these new checks have run.
+Run the application-pool audit after the matching backend change is deployed. It accepts a documented `403` for an unavailable All applicants pool, verifies bounded pending-application pages without requiring any applicants, and rejects unknown pool values. It also checks that both pools reject a missing key. The recorded audit snapshot is historical and does not claim these new checks have run.
 
 The latest timings are documented in [docs/upstream-api-findings.md](docs/upstream-api-findings.md). `profile:api` provides a safe, read-only latency pass.
 
