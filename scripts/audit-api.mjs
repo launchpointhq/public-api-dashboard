@@ -115,6 +115,8 @@ const authPaths = [
   ["GET", "/payouts/stats"],
   ["GET", "/payouts/pending?limit=1"],
   ["GET", "/creators?limit=1"],
+  ["GET", "/applications?folder=recommended&limit=1"],
+  ["GET", "/applications?folder=all&limit=1"],
   ["GET", "/creators/collections"],
   ["GET", "/contracts?limit=1"],
 ];
@@ -279,6 +281,35 @@ await request({
   check: listCheck,
 });
 await request({ name: "List creators with campaign status", path: "/creators?page=1&limit=2", expected: 200, check: listCheck });
+for (const folder of ["recommended", "all"]) {
+  await request({
+    name: `${folder} pending applications`,
+    path: `/applications?page=1&limit=2&status=pending&folder=${folder}`,
+    expected: folder === "all" ? [200, 403] : 200,
+    check: (payload, response) => {
+      if (response.status === 403) {
+        return {
+          ok: payload?.error === "All applicants is not available for this workspace",
+          detail: "All applicants is explicitly unavailable to this workspace",
+        };
+      }
+      return {
+        ok: Array.isArray(payload?.data) && payload.data.length <= 2 &&
+          payload.page === 1 && Number.isInteger(payload.total) && payload.total >= payload.data.length &&
+          Number.isInteger(payload.totalPages) && payload.totalPages >= 0 &&
+          payload.data.every((row) => typeof row.id === "string" && typeof row.creatorId === "string" &&
+            typeof row.programId === "string" && row.status === "pending"),
+        detail: "bounded pending application page with opaque creator IDs and pagination totals",
+      };
+    },
+  });
+}
+await request({
+  name: "Reject an unknown application folder",
+  path: "/applications?folder=invalid&limit=1",
+  expected: 400,
+  check: (payload) => ({ ok: typeof payload?.error === "string", detail: "invalid folder is rejected instead of silently changing population" }),
+});
 await request({ name: "List creator collections", path: "/creators/collections", expected: 200, check: listCheck });
 await request({ name: "List contracts with pagination", path: "/contracts?page=1&limit=2", expected: 200, check: listCheck });
 
