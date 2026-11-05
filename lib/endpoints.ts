@@ -27,6 +27,7 @@ export const ENDPOINTS: Endpoint[] = [
   { method: "GET", path: "/payouts/stats", group: "Payouts", name: "Wallet stats", description: "Balance, amount owed, deposits, and lifetime paid." },
   { method: "GET", path: "/payouts/pending", group: "Payouts", name: "Pending payouts", description: "Due, overdue, and upcoming creator payouts.", defaultQuery: "page=1&limit=10&sortBy=amount&sortOrder=desc" },
   { method: "GET", path: "/creators", group: "Creators", name: "List creators", description: "Creators with campaign-level contract status.", defaultQuery: "page=1&limit=10" },
+  { method: "GET", path: "/applications", group: "Creators", name: "Browse applications", description: "Canvas applications. Pending applicants default to folder=recommended. Explicitly use folder=all for Recommended plus additional eligible applicants, not only the additional group. All requires workspace permission (403 if unavailable); quality, safety and campaign eligibility checks still apply. Approved/rejected applications are unchanged. Supports programId, search, status and pagination.", defaultQuery: "page=1&limit=10&status=pending&folder=recommended" },
   { method: "GET", path: "/creators/collections", group: "Creators", name: "Creator collections", description: "Saved creator groups for this company." },
   { method: "GET", path: "/contracts", group: "Contracts", name: "List contracts", description: "Contract metadata without sensitive payment details.", defaultQuery: "page=1&limit=10" },
 ];

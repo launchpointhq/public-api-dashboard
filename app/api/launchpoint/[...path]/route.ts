@@ -13,6 +13,7 @@ const allowedGetPaths = [
   /^payouts$/,
   /^payouts\/(stats|pending)$/,
   /^creators$/,
+  /^applications$/,
   /^creators\/collections$/,
   /^contracts$/,
 ];
