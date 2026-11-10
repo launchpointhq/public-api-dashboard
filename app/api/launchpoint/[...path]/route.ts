@@ -14,6 +14,8 @@ const allowedGetPaths = [
   /^payouts\/(stats|pending)$/,
   /^creators$/,
   /^applications$/,
+  /^onboarding\/proofs$/,
+  /^onboarding\/[^/]+$/,
   /^creators\/collections$/,
   /^contracts$/,
 ];

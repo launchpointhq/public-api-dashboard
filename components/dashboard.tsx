@@ -550,6 +550,49 @@ function PostAdCode({ code }: { code?: string | null }) {
   );
 }
 
+type Actor = { id: string; type: "person" | "api_key" | "system"; name: string | null };
+type Confirmation = { confirmedAt: number; confirmedViews: number | null; confirmedBy: Actor | null };
+
+function ActorLabel({ actor }: { actor: Actor | null | undefined }) {
+  if (!actor) return <span>Actor not recorded</span>;
+  return <div className="review-actor"><strong>{actor.name || (actor.type === "api_key" ? "API key" : actor.type === "system" ? "System" : "Name unavailable")}</strong><small>{actor.type.replaceAll("_", " ")}</small><details><summary>Actor ID</summary><code>{actor.id}</code></details></div>;
+}
+
+function PostConfirmation({ confirmation }: { confirmation: Confirmation | null | undefined }) {
+  if (confirmation === undefined) return <span>Review data not returned</span>;
+  if (confirmation === null) return <span>No confirmation</span>;
+  return <div className="post-confirmation">
+    <span>{formatDate(confirmation.confirmedAt, true)}</span>
+    <span>{confirmation.confirmedViews === null ? "Views not recorded" : `${whole.format(confirmation.confirmedViews)} highest-platform views`}</span>
+    <ActorLabel actor={confirmation.confirmedBy} />
+  </div>;
+}
+
+function ReviewAuditResult({ endpoint, response }: { endpoint: string; response: Json }) {
+  const body = response.data ?? response;
+  const list = Array.isArray(body) ? body : Array.isArray(body.data) ? body.data : [];
+  if (endpoint === "/onboarding/proofs") {
+    return <section className="table-panel review-audit"><SectionTitle kicker="Account checks" title="Proof decisions" />
+      <p>Only returned proofs are shown. Use the query's page and status to read another set.</p>
+      {list.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Requirement / account</th><th>Status</th><th>Reviewed</th><th>Reviewer</th></tr></thead><tbody>{list.map((proof: Json) => <tr key={proof.id}><td><strong>{proof.requirement?.label || "Account proof"}</strong><div>{proof.account?.platform} · {proof.account?.username || "Account hidden"}</div><code>{proof.id}</code></td><td>{proof.status}</td><td>{formatDate(proof.reviewedAt, true)}</td><td><ActorLabel actor={proof.reviewedBy} /></td></tr>)}</tbody></table></div> : <Empty title="No proofs in this page" body="Try another status or program." />}
+    </section>;
+  }
+  if (endpoint === "/posts/excluded") {
+    return <section className="table-panel review-audit"><SectionTitle kicker="Removed content" title="Exclusion records" />
+      <p>Views are the post's last observed count at exclusion, not live views. Old records can have no actor or view snapshot.</p>
+      {list.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Post</th><th>Excluded</th><th>Source / workspace</th><th>Actor</th><th>Views at exclusion</th></tr></thead><tbody>{list.map((post: Json) => <tr key={post.id}><td>{post.url ? <a href={post.url} target="_blank" rel="noreferrer">{post.platform || "Original post"} <ExternalLink size={11} /></a> : <span>{post.platform || "Post"}</span>}<code>{post.id}</code><div>{post.exclusion?.disposition}</div>{post.exclusion?.message ? <p>{post.exclusion.message}</p> : null}</td><td>{formatDate(post.exclusion?.excludedAt, true)}</td><td>{post.exclusion?.source || "Not recorded"}<code>{post.exclusion?.actorWorkspaceId || "Workspace not recorded"}</code></td><td><ActorLabel actor={post.exclusion?.excludedBy} /></td><td>{post.exclusion?.viewsAtExclusion == null ? "Not recorded" : whole.format(post.exclusion.viewsAtExclusion)}</td></tr>)}</tbody></table></div> : <Empty title="No exclusions in this page" body="Choose another program or page. Active posts remain in the Content view." />}
+    </section>;
+  }
+  if (endpoint !== "/onboarding/{creatorId}") return null;
+  const decisions = [
+    ...(body.accounts ?? []).flatMap((account: Json, accountIndex: number) => (account.requirements ?? []).map((requirement: Json) => ({ ...requirement, key: `account-${accountIndex}-${requirement.id}`, context: `${account.platform} · ${account.username || "Account hidden"}` }))),
+    ...(body.checklist ?? []).map((item: Json) => ({ ...item, key: `checklist-${item.id}`, context: "Creator checklist" })),
+  ];
+  return <section className="table-panel review-audit"><SectionTitle kicker="Onboarding" title="Saved decisions" /><p>These are the latest saved decisions, not a complete review history. An automatic check is not a human review.</p>
+    {decisions.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Requirement / account</th><th>Source</th><th>Decided</th><th>Reviewer</th></tr></thead><tbody>{decisions.map((item: Json) => <tr key={item.key}><td><strong>{item.label}</strong><div>{item.context}</div></td><td>{item.decision?.source || "No saved source"}</td><td>{formatDate(item.decision?.decidedAt, true)}</td><td><ActorLabel actor={item.decision?.decidedBy} /></td></tr>)}</tbody></table></div> : <Empty title="No requirements returned" body="Check the creator and program IDs." />}
+  </section>;
+}
+
 function Content({ resources, loadResource }: { resources: Record<ResourceKey, Resource>; loadResource: (key: ResourceKey) => Promise<void> }) {
   const videos = rows(resources.videos);
   const posts = rows(resources.posts);
@@ -638,7 +681,7 @@ function Content({ resources, loadResource }: { resources: Record<ResourceKey, R
         ) : filtered.length ? (
           <div className="data-table-wrap">
             <table className="data-table content-table">
-              <thead><tr><th>Post</th><th>Ad code</th><th>Views</th><th>Today</th><th>Engagement</th><th>Earnings</th><th>CPM</th><th>Paid</th><th /></tr></thead>
+              <thead><tr><th>Post</th><th>Ad code</th><th>Views</th><th>Today</th><th>Engagement</th><th>Earnings</th><th>CPM</th><th>Paid</th><th>Latest confirmation</th><th /></tr></thead>
               <tbody>
                 {filtered.map((video: Json) => {
                   const trend = viewTrend(video);
@@ -652,6 +695,7 @@ function Content({ resources, loadResource }: { resources: Record<ResourceKey, R
                       <td className="numeric">{usd.format(number(video.earnings))}</td>
                       <td className="numeric">{cpmLabel(video.cpm)}</td>
                       <td>{video.paid ? <Badge tone="good">Paid</Badge> : <Badge tone="warm">Open</Badge>}</td>
+                      <td><PostConfirmation confirmation={video.confirmation} /></td>
                       <td><button className="row-button" onClick={() => void selectPost(video.id)} aria-label={`Open ${video.title || "post"}`}><ArrowRight size={16} /></button></td>
                     </tr>
                   );
@@ -676,6 +720,7 @@ function Content({ resources, loadResource }: { resources: Record<ResourceKey, R
                 <p>{postDetail.description || `${postDetail.creator || postDetail.creatorInfo?.name || "Creator"} posted this on ${formatDate(postDetail.uploadedAt)}.`}</p>
                 <a href={postDetail.url} target="_blank" rel="noreferrer">Open original <ExternalLink size={14} /></a>
                 <div className="post-ad-code"><span>Ad code</span><PostAdCode key={postDetail.adCode} code={postDetail.adCode} /></div>
+                <div className="post-ad-code"><span>Latest confirmation</span><PostConfirmation confirmation={postDetail.confirmation} /></div>
                 <div className="detail-facts">
                   <div><span>Program</span><strong>{postDetail.program?.name || "—"}</strong></div>
                   <div><span>Contract</span><strong>{postDetail.contract?.name || "—"}</strong></div>
@@ -992,6 +1037,8 @@ function ApiLab({ resources }: { resources: Record<ResourceKey, Resource> }) {
           {run.status === "idle" ? <div className="response-empty"><Code2 size={24} /><strong>Ready when you are</strong><span>The live response will appear here.</span></div> : run.status === "loading" ? <div className="response-empty"><LoaderCircle size={24} className="spin" /><strong>Calling Launchpoint</strong><span>Your key is being added on the server.</span></div> : <pre>{JSON.stringify(run.result?.data ?? { error: run.error }, null, 2)}</pre>}
         </div>
       </section>
+
+      {run.status === "ready" && run.result?.ok ? <ReviewAuditResult endpoint={selected.path} response={run.result.data} /> : null}
 
       <section className="audit-panel">
         <SectionTitle kicker="Latest recorded audit" title={LATEST_AUDIT.failed ? `${LATEST_AUDIT.passed} passed. ${LATEST_AUDIT.failed} need work.` : `${LATEST_AUDIT.passed} passed. Every tested route was healthy.`} action={<span className="audit-date">Tested {formatDate(LATEST_AUDIT.ranAt, true)}</span>} />
