@@ -31,6 +31,14 @@ Run the application-pool audit after the matching backend change is deployed. It
 
 The latest timings are documented in [docs/upstream-api-findings.md](docs/upstream-api-findings.md). `profile:api` provides a safe, read-only latency pass.
 
+## Review attribution
+
+The Content table and post detail show the latest saved confirmation: actor, time, and highest-platform views at confirmation. Backlog cleanup is labeled as a system action, not a human review. This stamp is not a complete review history or a payment decision.
+
+In API lab, select **Review account proofs**, **Creator onboarding decisions**, or **List excluded posts**. Replace the program ID (and creator ID when needed), then run the read request. A table below the response shows the review metadata. Use `page` and `limit` to read more records. Reviewer IDs are opaque and scoped to the requesting workspace; absent names and actors stay unavailable. Exclusion views are each post's last observed views when it was excluded, not the video's highest-platform views.
+
+Deploy the matching backend review-attribution change and its exclusion migration before using these routes or running the expanded audit. Old exclusions do not gain inferred actors or view snapshots. The audit validates the new fields when records exist and accepts empty pages. The recorded audit snapshot predates this change; it is not evidence of this rollout.
+
 ## Security
 
 Do not deploy this app publicly with a sensitive API key unless you add access control. The server proxy protects the key from browser code, but a public deployment would make the proxied data routes reachable by visitors.

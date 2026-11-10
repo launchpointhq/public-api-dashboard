@@ -1,7 +1,7 @@
 export type Endpoint = {
   method: "GET" | "POST";
   path: string;
-  group: "Programs" | "Posts" | "Analytics" | "Payouts" | "Creators" | "Contracts";
+  group: "Programs" | "Posts" | "Analytics" | "Payouts" | "Creators" | "Contracts" | "Onboarding";
   name: string;
   description: string;
   defaultQuery?: string;
@@ -11,8 +11,11 @@ export type Endpoint = {
 
 export const ENDPOINTS: Endpoint[] = [
   { method: "GET", path: "/programs", group: "Programs", name: "List programs", description: "Campaigns with status, search, and pagination.", defaultQuery: "page=1&limit=10" },
-  { method: "GET", path: "/posts", group: "Posts", name: "List posts", description: "Tracked content with program, creator, platform, and date filters. Includes adCode for verified or submitted, unexpired codes, and adCodeStatus (verified or submitted; null when there is no code).", defaultQuery: "page=1&limit=10" },
-  { method: "GET", path: "/posts/{id}", group: "Posts", name: "Get post", description: "A post, its creator, program, contract, payment, and current metrics. Includes adCode for verified or submitted, unexpired codes, and adCodeStatus (verified or submitted; null when there is no code)." },
+  { method: "GET", path: "/posts/exclusions", group: "Posts", name: "List excluded posts", description: "Removed posts for one visible program, including deleted posts. Shows exclusion time, source, workspace, actor, and that post's last observed views at exclusion. Old records can have no actor or view snapshot. Requires the review-audit backend release and migration.", defaultQuery: "programId={programId}&page=1&limit=10" },
+  { method: "GET", path: "/onboarding/proofs", group: "Onboarding", name: "Review account proofs", description: "Proofs for one program, with reviewedBy and reviewedAt. Use status=approved, rejected, or pending_review. Actor IDs are stable within the requesting workspace; a missing name does not mean a missing actor. Requires the review-audit backend release.", defaultQuery: "programId={programId}&status=approved&page=1&limit=10" },
+  { method: "GET", path: "/onboarding/{creatorId}", group: "Onboarding", name: "Creator onboarding decisions", description: "Account requirements and creator checklist decisions, with source, time, and actor. Supply an opaque creator ID from this workspace. Automated checks do not imply a human review. Requires the review-audit backend release.", defaultQuery: "programId={programId}" },
+  { method: "GET", path: "/posts", group: "Posts", name: "List posts", description: "Tracked content with program, creator, platform, and date filters. Includes the latest confirmation with actor, time, and highest-platform views; backlog cleanup is not a human review. Includes adCode for verified or submitted, unexpired codes, and adCodeStatus (verified or submitted; null when there is no code).", defaultQuery: "page=1&limit=10" },
+  { method: "GET", path: "/posts/{id}", group: "Posts", name: "Get post", description: "A post, its creator, program, contract, payment, current metrics, and latest confirmation (actor, time, highest-platform views; null when not confirmed). Includes adCode for verified or submitted, unexpired codes, and adCodeStatus (verified or submitted; null when there is no code)." },
   { method: "GET", path: "/posts/{id}/metrics-history", group: "Posts", name: "Post metrics history", description: "Daily metric snapshots, deltas, and growth.", defaultQuery: "days=30&limit=30" },
   { method: "GET", path: "/posts/{id}/analysis", group: "Posts", name: "Post analysis", description: "Storyboard scenes plus organic and paid retention." },
   { method: "POST", path: "/posts/export", group: "Posts", name: "Export posts", description: "Download matching post data as CSV.", defaultBody: '{\n  "selectedIds": []\n}' },
