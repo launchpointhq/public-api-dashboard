@@ -25,16 +25,14 @@ if (!apiKey) {
 
 const results = [];
 
-function isReviewActor(actor) {
+function isActor(actor) {
   return actor === null || Boolean(actor && typeof actor.id === "string" && actor.id.length > 0 &&
     ["person", "api_key", "system"].includes(actor.type) && (actor.name === null || typeof actor.name === "string"));
 }
 
 function isConfirmation(value) {
   return value === null || Boolean(value && Number.isFinite(value.confirmedAt) &&
-    (value.confirmedViews === null || Number.isFinite(value.confirmedViews)) &&
-    ["person", "backlog", "unknown"].includes(value.source) && isReviewActor(value.confirmedBy) &&
-    (value.source !== "backlog" || value.confirmedBy?.type === "system"));
+    (value.confirmedViews === null || Number.isFinite(value.confirmedViews)) && isActor(value.confirmedBy));
 }
 
 function extractRows(payload) {
@@ -112,7 +110,7 @@ async function request({ name, method = "GET", path, body, auth = true, expected
 const authPaths = [
   ["GET", "/programs?limit=1"],
   ["GET", "/posts?limit=1"],
-  ["GET", "/posts/exclusions?programId=11111111-1111-4111-8111-111111111111&limit=1"],
+  ["GET", "/posts/excluded?programId=11111111-1111-4111-8111-111111111111&limit=1"],
   ["GET", "/onboarding/proofs?programId=11111111-1111-4111-8111-111111111111&limit=1"],
   ["GET", "/onboarding/not-a-real-creator?programId=11111111-1111-4111-8111-111111111111"],
   ["GET", "/posts/not-a-real-post"],
@@ -213,13 +211,13 @@ await request({
 if (programId) {
   await request({
     name: "List program exclusions with review attribution",
-    path: `/posts/exclusions?programId=${encodeURIComponent(programId)}&page=1&limit=2`,
+    path: `/posts/excluded?programId=${encodeURIComponent(programId)}&page=1&limit=2`,
     expected: 200,
     check: (payload) => ({
       ok: Array.isArray(payload?.data) && payload.data.length <= 2 && payload.page === 1 &&
         Number.isInteger(payload.total) && Number.isInteger(payload.totalPages) && payload.data.every((row) =>
           row.program?.id === programId && typeof row.id === "string" && typeof row.creatorId === "string" &&
-          Number.isFinite(row.exclusion?.excludedAt) && isReviewActor(row.exclusion?.actor) &&
+          Number.isFinite(row.exclusion?.excludedAt) && isActor(row.exclusion?.excludedBy) &&
           (row.exclusion?.viewsAtExclusion === null || Number.isFinite(row.exclusion?.viewsAtExclusion))),
       detail: "bounded exclusion page with nullable actor and view snapshot; no records required",
     }),
@@ -230,7 +228,7 @@ if (programId) {
     expected: 200,
     check: (payload) => ({
       ok: Array.isArray(payload?.data) && payload.data.length <= 2 && payload.data.every((row) =>
-        row.programId === programId && isReviewActor(row.reviewedBy) && Number.isFinite(row.reviewedAt)),
+        row.programId === programId && isActor(row.reviewedBy) && Number.isFinite(row.reviewedAt)),
       detail: "approved proofs include a review time and nullable reviewer; no proofs required",
     }),
   });
@@ -243,8 +241,8 @@ if (programId) {
       if (response.status !== 200) return { ok: typeof payload?.error === "string", detail: "review access or current roster membership refused safely" };
       const requirements = [...(payload.accounts ?? []).flatMap((account) => account.requirements ?? []), ...(payload.checklist ?? [])];
       return { ok: Array.isArray(payload.accounts) && Array.isArray(payload.checklist) && requirements.every((row) => row.decision === null || Boolean(row.decision &&
-        (row.decision.source === null || typeof row.decision.source === "string") &&
-        (row.decision.decidedAt === null || Number.isFinite(row.decision.decidedAt)) && isReviewActor(row.decision.decidedBy))),
+        ["profile_check", "reviewer", "proof"].includes(row.decision.source) &&
+        (row.decision.decidedAt === null || Number.isFinite(row.decision.decidedAt)) && isActor(row.decision.decidedBy))),
       detail: "displayed requirements have nullable latest decision metadata" };
     },
   });

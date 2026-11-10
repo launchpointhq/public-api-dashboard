@@ -550,22 +550,21 @@ function PostAdCode({ code }: { code?: string | null }) {
   );
 }
 
-type ReviewActor = { id: string; type: "person" | "api_key" | "system"; name: string | null };
-type Confirmation = { confirmedAt: number; confirmedViews: number | null; source: "person" | "backlog" | "unknown"; confirmedBy: ReviewActor | null };
+type Actor = { id: string; type: "person" | "api_key" | "system"; name: string | null };
+type Confirmation = { confirmedAt: number; confirmedViews: number | null; confirmedBy: Actor | null };
 
-function ReviewActorLabel({ actor }: { actor: ReviewActor | null | undefined }) {
+function ActorLabel({ actor }: { actor: Actor | null | undefined }) {
   if (!actor) return <span>Actor not recorded</span>;
-  return <div className="review-actor"><strong>{actor.name || (actor.type === "api_key" ? "API key" : actor.type === "system" ? "System" : "Name unavailable")}</strong><small>{actor.type.replaceAll("_", " ")}</small><details><summary>Reviewer ID</summary><code>{actor.id}</code></details></div>;
+  return <div className="review-actor"><strong>{actor.name || (actor.type === "api_key" ? "API key" : actor.type === "system" ? "System" : "Name unavailable")}</strong><small>{actor.type.replaceAll("_", " ")}</small><details><summary>Actor ID</summary><code>{actor.id}</code></details></div>;
 }
 
 function PostConfirmation({ confirmation }: { confirmation: Confirmation | null | undefined }) {
   if (confirmation === undefined) return <span>Review data not returned</span>;
   if (confirmation === null) return <span>No confirmation</span>;
   return <div className="post-confirmation">
-    <strong>{confirmation.source === "backlog" ? "Backlog cleanup · not a human review" : confirmation.source === "person" ? "Human confirmation" : "Confirmation · source unknown"}</strong>
     <span>{formatDate(confirmation.confirmedAt, true)}</span>
     <span>{confirmation.confirmedViews === null ? "Views not recorded" : `${whole.format(confirmation.confirmedViews)} highest-platform views`}</span>
-    <ReviewActorLabel actor={confirmation.confirmedBy} />
+    <ActorLabel actor={confirmation.confirmedBy} />
   </div>;
 }
 
@@ -575,13 +574,13 @@ function ReviewAuditResult({ endpoint, response }: { endpoint: string; response:
   if (endpoint === "/onboarding/proofs") {
     return <section className="table-panel review-audit"><SectionTitle kicker="Account checks" title="Proof decisions" />
       <p>Only returned proofs are shown. Use the query's page and status to read another set.</p>
-      {list.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Requirement / account</th><th>Status</th><th>Reviewed</th><th>Reviewer</th></tr></thead><tbody>{list.map((proof: Json) => <tr key={proof.id}><td><strong>{proof.requirement?.label || "Account proof"}</strong><div>{proof.account?.platform} · {proof.account?.username || "Account hidden"}</div><code>{proof.id}</code></td><td>{proof.status}</td><td>{formatDate(proof.reviewedAt, true)}</td><td><ReviewActorLabel actor={proof.reviewedBy} /></td></tr>)}</tbody></table></div> : <Empty title="No proofs in this page" body="Try another status or program." />}
+      {list.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Requirement / account</th><th>Status</th><th>Reviewed</th><th>Reviewer</th></tr></thead><tbody>{list.map((proof: Json) => <tr key={proof.id}><td><strong>{proof.requirement?.label || "Account proof"}</strong><div>{proof.account?.platform} · {proof.account?.username || "Account hidden"}</div><code>{proof.id}</code></td><td>{proof.status}</td><td>{formatDate(proof.reviewedAt, true)}</td><td><ActorLabel actor={proof.reviewedBy} /></td></tr>)}</tbody></table></div> : <Empty title="No proofs in this page" body="Try another status or program." />}
     </section>;
   }
-  if (endpoint === "/posts/exclusions") {
+  if (endpoint === "/posts/excluded") {
     return <section className="table-panel review-audit"><SectionTitle kicker="Removed content" title="Exclusion records" />
       <p>Views are the post's last observed count at exclusion, not live views. Old records can have no actor or view snapshot.</p>
-      {list.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Post</th><th>Excluded</th><th>Source / workspace</th><th>Actor</th><th>Views at exclusion</th></tr></thead><tbody>{list.map((post: Json) => <tr key={post.id}><td>{post.url ? <a href={post.url} target="_blank" rel="noreferrer">{post.platform || "Original post"} <ExternalLink size={11} /></a> : <span>{post.platform || "Post"}</span>}<code>{post.id}</code><div>{post.exclusion?.disposition}</div>{post.exclusion?.message ? <p>{post.exclusion.message}</p> : null}</td><td>{formatDate(post.exclusion?.excludedAt, true)}</td><td>{post.exclusion?.source || "Not recorded"}<code>{post.exclusion?.actorWorkspaceId || "Workspace not recorded"}</code></td><td><ReviewActorLabel actor={post.exclusion?.actor} /></td><td>{post.exclusion?.viewsAtExclusion == null ? "Not recorded" : whole.format(post.exclusion.viewsAtExclusion)}</td></tr>)}</tbody></table></div> : <Empty title="No exclusions in this page" body="Choose another program or page. Active posts remain in the Content view." />}
+      {list.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Post</th><th>Excluded</th><th>Source / workspace</th><th>Actor</th><th>Views at exclusion</th></tr></thead><tbody>{list.map((post: Json) => <tr key={post.id}><td>{post.url ? <a href={post.url} target="_blank" rel="noreferrer">{post.platform || "Original post"} <ExternalLink size={11} /></a> : <span>{post.platform || "Post"}</span>}<code>{post.id}</code><div>{post.exclusion?.disposition}</div>{post.exclusion?.message ? <p>{post.exclusion.message}</p> : null}</td><td>{formatDate(post.exclusion?.excludedAt, true)}</td><td>{post.exclusion?.source || "Not recorded"}<code>{post.exclusion?.actorWorkspaceId || "Workspace not recorded"}</code></td><td><ActorLabel actor={post.exclusion?.excludedBy} /></td><td>{post.exclusion?.viewsAtExclusion == null ? "Not recorded" : whole.format(post.exclusion.viewsAtExclusion)}</td></tr>)}</tbody></table></div> : <Empty title="No exclusions in this page" body="Choose another program or page. Active posts remain in the Content view." />}
     </section>;
   }
   if (endpoint !== "/onboarding/{creatorId}") return null;
@@ -590,7 +589,7 @@ function ReviewAuditResult({ endpoint, response }: { endpoint: string; response:
     ...(body.checklist ?? []).map((item: Json) => ({ ...item, key: `checklist-${item.id}`, context: "Creator checklist" })),
   ];
   return <section className="table-panel review-audit"><SectionTitle kicker="Onboarding" title="Saved decisions" /><p>These are the latest saved decisions, not a complete review history. An automatic check is not a human review.</p>
-    {decisions.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Requirement / account</th><th>Source</th><th>Decided</th><th>Reviewer</th></tr></thead><tbody>{decisions.map((item: Json) => <tr key={item.key}><td><strong>{item.label}</strong><div>{item.context}</div></td><td>{item.decision?.source || "No saved source"}</td><td>{formatDate(item.decision?.decidedAt, true)}</td><td><ReviewActorLabel actor={item.decision?.decidedBy} /></td></tr>)}</tbody></table></div> : <Empty title="No requirements returned" body="Check the creator and program IDs." />}
+    {decisions.length ? <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Requirement / account</th><th>Source</th><th>Decided</th><th>Reviewer</th></tr></thead><tbody>{decisions.map((item: Json) => <tr key={item.key}><td><strong>{item.label}</strong><div>{item.context}</div></td><td>{item.decision?.source || "No saved source"}</td><td>{formatDate(item.decision?.decidedAt, true)}</td><td><ActorLabel actor={item.decision?.decidedBy} /></td></tr>)}</tbody></table></div> : <Empty title="No requirements returned" body="Check the creator and program IDs." />}
   </section>;
 }
 

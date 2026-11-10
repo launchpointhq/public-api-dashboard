@@ -33,7 +33,7 @@ The latest timings are documented in [docs/upstream-api-findings.md](docs/upstre
 
 ## Review attribution
 
-The Content table and post detail show the latest saved confirmation: actor, time, and highest-platform views at confirmation. Backlog cleanup is labeled as a system action, not a human review. This stamp is not a complete review history or a payment decision.
+The Content table and post detail show the video's confirmation: time, views then, and `confirmedBy`. A Launchpoint job shows as a system actor.
 
 In API lab, select **Review account proofs**, **Creator onboarding decisions**, or **List excluded posts**. Replace the program ID (and creator ID when needed), then run the read request. A table below the response shows the review metadata. Use `page` and `limit` to read more records. Reviewer IDs are opaque and scoped to the requesting workspace; absent names and actors stay unavailable. Exclusion views are each post's last observed views when it was excluded, not the video's highest-platform views.
 
