@@ -46,3 +46,17 @@ Do not deploy this app publicly with a sensitive API key unless you add access c
 Environment files are ignored by git. Never commit `.env.local`.
 
 Live contract: [Launchpoint OpenAPI](https://docs.launchpointhq.com/api-reference/openapi.json)
+
+## Media rejection prompts
+
+In API lab, select **Review media queue** for a program, then **Get media for
+review** to read the video and its current `revisionId`. **Reject media** has
+six preset reasons, an optional custom message, a revision ID field, and a
+preview of the text the creator receives. The custom message comes first;
+selected prompts follow, separated by blank lines. Combined feedback must be
+1–1000 characters. A confirmation checkbox is required before sending this
+real write. The proxy permits only the exact media read and reject routes.
+
+Deploy the matching backend rejection-reasons change before using this form.
+The audit checks invalid inputs with an invalid media ID and never rejects a
+real video. Its prior recorded snapshot does not verify this feature.

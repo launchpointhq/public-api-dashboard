@@ -18,9 +18,11 @@ const allowedGetPaths = [
   /^onboarding\/[^/]+$/,
   /^creators\/collections$/,
   /^contracts$/,
+  /^media$/,
+  /^media\/[^/]+$/,
 ];
 
-const allowedPostPaths = [/^posts\/export$/, /^programs\/[^/]+\/invite$/];
+const allowedPostPaths = [/^posts\/export$/, /^programs\/[^/]+\/invite$/, /^media\/[^/]+\/reject$/];
 
 type CacheEntry = {
   body: ArrayBuffer;

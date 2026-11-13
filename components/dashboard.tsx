@@ -44,6 +44,7 @@ import {
   YAxis,
 } from "recharts";
 import { ENDPOINTS, type Endpoint } from "@/lib/endpoints";
+import { MEDIA_REJECTION_PROMPTS, type MediaRejectionReason } from "@/lib/media-rejection";
 import { LATEST_AUDIT } from "@/lib/audit-snapshot";
 
 type Json = Record<string, any>;
@@ -976,6 +977,11 @@ function ApiLab({ resources }: { resources: Record<ResourceKey, Resource> }) {
   const [confirmedWrite, setConfirmedWrite] = useState(false);
   const [run, setRun] = useState<{ status: "idle" | "loading" | "ready" | "error"; result?: Json; error?: string }>({ status: "idle" });
   const [endpointFilter, setEndpointFilter] = useState("");
+  const [rejectionReasons, setRejectionReasons] = useState<MediaRejectionReason[]>([]);
+  const [rejectionMessage, setRejectionMessage] = useState("");
+  const [rejectionRevisionId, setRejectionRevisionId] = useState("");
+  const isMediaRejection = selected.path === "/media/{id}/reject";
+  const rejectionPreview = [rejectionMessage.trim(), ...rejectionReasons.map((reason) => MEDIA_REJECTION_PROMPTS.find((prompt) => prompt.id === reason)?.message)].filter(Boolean).join("\n\n");
 
   const selectEndpoint = (endpoint: Endpoint) => {
     setSelected(endpoint);
@@ -983,6 +989,9 @@ function ApiLab({ resources }: { resources: Record<ResourceKey, Resource> }) {
     setQuery(endpoint.defaultQuery ?? "");
     setBody(endpoint.defaultBody ?? "");
     setConfirmedWrite(false);
+    setRejectionReasons([]);
+    setRejectionMessage("");
+    setRejectionRevisionId("");
     setRun({ status: "idle" });
   };
 
@@ -995,10 +1004,19 @@ function ApiLab({ resources }: { resources: Record<ResourceKey, Resource> }) {
       setRun({ status: "error", error: "Confirm the write before running this endpoint." });
       return;
     }
+    if (isMediaRejection && (rejectionPreview.length === 0 || rejectionPreview.length > 1000)) {
+      setRun({ status: "error", error: "Choose a reason or write a message. Combined feedback must be 1–1000 characters." });
+      return;
+    }
     setRun({ status: "loading" });
     try {
       const fullPath = `${path}${query ? `?${query.replace(/^\?/, "")}` : ""}`;
-      const result = await callApi(fullPath, selected.method === "POST" ? { method: "POST", headers: { "content-type": "application/json" }, body: body || "{}" } : undefined);
+      const requestBody = isMediaRejection ? JSON.stringify({
+        ...(rejectionReasons.length ? { reasons: rejectionReasons } : {}),
+        ...(rejectionMessage.trim() ? { message: rejectionMessage.trim() } : {}),
+        ...(rejectionRevisionId.trim() ? { revisionId: rejectionRevisionId.trim() } : {}),
+      }) : body || "{}";
+      const result = await callApi(fullPath, selected.method === "POST" ? { method: "POST", headers: { "content-type": "application/json" }, body: requestBody } : undefined);
       setRun({ status: "ready", result });
     } catch (caught) {
       const error = caught as Error & { result?: Json };
@@ -1027,8 +1045,13 @@ function ApiLab({ resources }: { resources: Record<ResourceKey, Resource> }) {
           <div className="request-head"><div><Badge tone={selected.method === "GET" ? "good" : "violet"}>{selected.method}</Badge><span>{selected.group}</span></div><h3>{selected.name}</h3><p>{selected.description}</p></div>
           <label>Path<input value={path} onChange={(event) => setPath(event.target.value)} spellCheck={false} /></label>
           <label>Query string<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="page=1&limit=10" spellCheck={false} /></label>
-          {selected.method === "POST" ? <label>JSON body<textarea value={body} onChange={(event) => setBody(event.target.value)} rows={6} spellCheck={false} /></label> : null}
-          {selected.writes ? <label className="write-confirm"><input type="checkbox" checked={confirmedWrite} onChange={(event) => setConfirmedWrite(event.target.checked)} /><span><strong>I understand this creates an invite</strong><small>Use a short expiry and low max uses for tests.</small></span></label> : null}
+          {isMediaRejection ? <>
+            <fieldset className="rejection-reasons"><legend>Preset reasons</legend>{MEDIA_REJECTION_PROMPTS.map((prompt) => <label key={prompt.id}><input type="checkbox" checked={rejectionReasons.includes(prompt.id)} onChange={(event) => setRejectionReasons((current) => event.target.checked ? [...current, prompt.id] : current.filter((reason) => reason !== prompt.id))} /><span>{prompt.label}</span></label>)}</fieldset>
+            <label>Custom message (optional)<textarea value={rejectionMessage} onChange={(event) => setRejectionMessage(event.target.value)} rows={3} maxLength={1000} /></label>
+            <label>Revision ID (optional)<input value={rejectionRevisionId} onChange={(event) => setRejectionRevisionId(event.target.value)} placeholder="revisionId from Get media" /></label>
+            <div className="rejection-preview"><strong>Creator feedback · {rejectionPreview.length}/1000 characters</strong><p>{rejectionPreview || "Choose a preset reason or write your message."}</p></div>
+          </> : selected.method === "POST" ? <label>JSON body<textarea value={body} onChange={(event) => setBody(event.target.value)} rows={6} spellCheck={false} /></label> : null}
+          {selected.writes ? <label className="write-confirm"><input type="checkbox" checked={confirmedWrite} onChange={(event) => setConfirmedWrite(event.target.checked)} /><span><strong>{isMediaRejection ? "I understand this rejects the media and notifies the creator" : "I understand this creates an invite"}</strong><small>{isMediaRejection ? "Review the video and feedback before you send." : "Use a short expiry and low max uses for tests."}</small></span></label> : null}
           <button className="run-button" onClick={() => void runEndpoint()} disabled={run.status === "loading"}>{run.status === "loading" ? <LoaderCircle size={17} className="spin" /> : <Play size={17} />} Run request <span>⌘ ↵</span></button>
         </div>
 
