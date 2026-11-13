@@ -1,7 +1,7 @@
 export type Endpoint = {
   method: "GET" | "POST";
   path: string;
-  group: "Programs" | "Posts" | "Analytics" | "Payouts" | "Creators" | "Contracts" | "Onboarding";
+  group: "Programs" | "Posts" | "Analytics" | "Payouts" | "Creators" | "Contracts" | "Onboarding" | "Media";
   name: string;
   description: string;
   defaultQuery?: string;
@@ -10,6 +10,9 @@ export type Endpoint = {
 };
 
 export const ENDPOINTS: Endpoint[] = [
+  { method: "GET", path: "/media", group: "Media", name: "Review media queue", description: "Media waiting for review in one program. Open an item and review its current revision before making a decision.", defaultQuery: "programId={programId}&status=pending_review&page=1&limit=10" },
+  { method: "GET", path: "/media/{id}", group: "Media", name: "Get media for review", description: "Current media, revisionId, review status, and saved rejectionComments. Media links require workspace access." },
+  { method: "POST", path: "/media/{id}/reject", group: "Media", name: "Reject media", description: "Choose preset reasons, write a custom message, or use both. The trimmed message comes first, followed by each selected prompt. The combined text must be 1–1000 characters. This sends feedback to the creator. Supply the revisionId you reviewed to guard against a newer revision.", writes: true },
   { method: "GET", path: "/programs", group: "Programs", name: "List programs", description: "Campaigns with status, search, and pagination.", defaultQuery: "page=1&limit=10" },
   { method: "GET", path: "/posts/excluded", group: "Posts", name: "List excluded posts", description: "Removed posts on visible programs, newest removal first, including deleted posts. Shows removal time, source, workspace, excludedBy, and the post's views when it was removed. Filter by programId, creatorId, fromDate, and toDate.", defaultQuery: "programId={programId}&page=1&limit=10" },
   { method: "GET", path: "/onboarding/proofs", group: "Onboarding", name: "Review account proofs", description: "Proofs for one program, with reviewedBy and reviewedAt. Use status=approved, rejected, or pending_review. Actor IDs are stable within the requesting workspace; a missing name does not mean a missing actor.", defaultQuery: "programId={programId}&status=approved&page=1&limit=10" },

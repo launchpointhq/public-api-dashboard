@@ -325,6 +325,18 @@ await request({
   }),
 });
 
+for (const body of [{}, { message: "Validation only", reasons: ["invalid"] }]) {
+  await request({
+    name: "Refuse invalid media rejection feedback without changes",
+    method: "POST",
+    path: "/media/00000000-0000-4000-8000-000000000000/reject",
+    body,
+    expected: 400,
+    check: (payload) => ({ ok: typeof payload?.error === "string", detail: "missing feedback or an unknown reason is refused before any decision" }),
+  });
+}
+await request({ name: "Media rejection requires an API key", method: "POST", path: "/media/00000000-0000-4000-8000-000000000000/reject", body: { reasons: ["video_quality"] }, auth: false, expected: 401 });
+
 await request({ name: "List wallet activity", path: "/payouts?page=1&limit=2", expected: 200, check: listCheck });
 await request({ name: "Get payout wallet stats", path: "/payouts/stats", expected: 200, check: listCheck });
 await request({
