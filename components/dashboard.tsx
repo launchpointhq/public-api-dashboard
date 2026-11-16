@@ -1032,7 +1032,7 @@ function ApiLab({ resources }: { resources: Record<ResourceKey, Resource> }) {
     <div className="view-stack enter">
       <section className="lab-hero">
         <div><span className="eyebrow">OpenAPI, made tangible</span><h2>{ENDPOINTS.length} doors.<br />One honest test bench.</h2><p>The key stays server-side. Pick a route, shape the request, and see the real response.</p></div>
-        <div className="lab-stamp"><Code2 size={24} /><strong>v1</strong><span>100 req/min</span><small>{rateRemaining ?? "—"} last seen remaining</small></div>
+        <div className="lab-stamp"><Code2 size={24} /><strong>v1</strong><span>200 req/min</span><small>{rateRemaining ?? "—"} last seen remaining</small></div>
       </section>
 
       <section className="lab-grid">
