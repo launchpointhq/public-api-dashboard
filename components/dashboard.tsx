@@ -1051,7 +1051,7 @@ function ApiLab({ resources }: { resources: Record<ResourceKey, Resource> }) {
             <label>Revision ID (optional)<input value={rejectionRevisionId} onChange={(event) => setRejectionRevisionId(event.target.value)} placeholder="revisionId from Get media" /></label>
             <div className="rejection-preview"><strong>Creator feedback · {rejectionPreview.length}/1000 characters</strong><p>{rejectionPreview || "Choose a preset reason or write your message."}</p></div>
           </> : selected.method === "POST" ? <label>JSON body<textarea value={body} onChange={(event) => setBody(event.target.value)} rows={6} spellCheck={false} /></label> : null}
-          {selected.writes ? <label className="write-confirm"><input type="checkbox" checked={confirmedWrite} onChange={(event) => setConfirmedWrite(event.target.checked)} /><span><strong>{isMediaRejection ? "I understand this rejects the media and notifies the creator" : "I understand this creates an invite"}</strong><small>{isMediaRejection ? "Review the video and feedback before you send." : "Use a short expiry and low max uses for tests."}</small></span></label> : null}
+          {selected.writes ? <label className="write-confirm"><input type="checkbox" checked={confirmedWrite} onChange={(event) => setConfirmedWrite(event.target.checked)} /><span><strong>{selected.writes.confirm}</strong><small>{selected.writes.hint}</small></span></label> : null}
           <button className="run-button" onClick={() => void runEndpoint()} disabled={run.status === "loading"}>{run.status === "loading" ? <LoaderCircle size={17} className="spin" /> : <Play size={17} />} Run request <span>⌘ ↵</span></button>
         </div>
 

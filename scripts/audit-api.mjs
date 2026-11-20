@@ -337,6 +337,16 @@ for (const body of [{}, { message: "Validation only", reasons: ["invalid"] }]) {
 }
 await request({ name: "Media rejection requires an API key", method: "POST", path: "/media/00000000-0000-4000-8000-000000000000/reject", body: { reasons: ["video_quality"] }, auth: false, expected: 401 });
 
+await request({
+  name: "Refuse an ad-code request for an unknown post without changes",
+  method: "POST",
+  path: "/posts/00000000-0000-4000-8000-000000000000/ad-code-request",
+  body: {},
+  expected: 404,
+  check: (payload) => ({ ok: typeof payload?.error === "string", detail: "a post the key cannot see is refused before any request is saved" }),
+});
+await request({ name: "Ad-code request requires an API key", method: "POST", path: "/posts/00000000-0000-4000-8000-000000000000/ad-code-request", body: {}, auth: false, expected: 401 });
+
 await request({ name: "List wallet activity", path: "/payouts?page=1&limit=2", expected: 200, check: listCheck });
 await request({ name: "Get payout wallet stats", path: "/payouts/stats", expected: 200, check: listCheck });
 await request({
